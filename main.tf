@@ -1,7 +1,7 @@
 locals {
   enabled   = module.this.enabled
   partition = join("", data.aws_partition.current.*.partition)
-  service_role_required = var.service_role_name != "" && local.enabled
+  service_role_required = var.service_role_name == "" && local.enabled
 }
 
 data "aws_partition" "current" {
@@ -117,14 +117,14 @@ resource "aws_iam_role_policy" "default" {
 resource "aws_iam_role_policy_attachment" "web_tier" {
   count = local.service_role_required ? 1 : 0
 
-  role       = join("", aws_iam_role.service.*.name)
+  role       = join("", aws_iam_role.ec2.*.name)
   policy_arn = "arn:${local.partition}:iam::aws:policy/AWSElasticBeanstalkWebTier"
 }
 
 resource "aws_iam_role_policy_attachment" "worker_tier" {
   count = local.service_role_required ? 1 : 0
 
-  role       = join("", aws_iam_role.service.*.name)
+  role       = join("", aws_iam_role.ec2.*.name)
   policy_arn = "arn:${local.partition}:iam::aws:policy/AWSElasticBeanstalkWorkerTier"
 }
 
@@ -132,21 +132,21 @@ resource "aws_iam_role_policy_attachment" "auto_scaling_full_access" {
   count = local.service_role_required ? 1 : 0
 
   role       = join("", aws_iam_role.service.*.name)
-  policy_arn = "arn:${local.partition}:iam::aws:policy/AutoScalingFullAccess "
+  policy_arn = "arn:${local.partition}:iam::aws:policy/AutoScalingFullAccess"
 }
 
 resource "aws_iam_role_policy_attachment" "elastic_load_balancing_full_access" {
   count = local.service_role_required ? 1 : 0
 
   role       = join("", aws_iam_role.service.*.name)
-  policy_arn = "arn:${local.partition}:iam::aws:policy/ElasticLoadBalancingFullAccess "
+  policy_arn = "arn:${local.partition}:iam::aws:policy/ElasticLoadBalancingFullAccess"
 }
 
 resource "aws_iam_role_policy_attachment" "elastic_beanstalk_enhanced_health" {
   count = local.service_role_required ? 1 : 0
 
   role       = join("", aws_iam_role.service.*.name)
-  policy_arn = "arn:${local.partition}:iam::aws:policy/AWSElasticBeanstalkEnhancedHealth "
+  policy_arn = "arn:${local.partition}:iam::aws:policy/AWSElasticBeanstalkEnhancedHealth"
 }
 
 resource "aws_iam_role_policy_attachment" "ssm_ec2" {
