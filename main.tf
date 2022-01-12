@@ -682,7 +682,8 @@ resource "aws_elastic_beanstalk_environment" "default" {
   setting {
     namespace = "aws:elasticbeanstalk:environment"
     name      = "ServiceRole"
-    value     = join("", try(aws_iam_role.service.*.name, var.service_role_name))
+    # value     = join("", try(aws_iam_role.service.*.name, data.aws_iam_role.service.*.name))
+    value = var.service_role_name
     resource  = ""
   }
 
