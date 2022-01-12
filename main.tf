@@ -29,7 +29,7 @@ data "aws_iam_policy_document" "service" {
 }
 
 data "aws_iam_role" "service" {
-  count = local.service_role_required == false ? 1 : 0
+  count = local.service_role_required ? 0 : 1
   name = var.service_role_name
 }
 resource "aws_iam_role" "service" {
@@ -682,8 +682,8 @@ resource "aws_elastic_beanstalk_environment" "default" {
   setting {
     namespace = "aws:elasticbeanstalk:environment"
     name      = "ServiceRole"
-    # value     = join("", try(aws_iam_role.service.*.name, data.aws_iam_role.service.*.name))
-    value = var.service_role_name
+    value     = join("", try(aws_iam_role.service.*.name, data.aws_iam_role.service.*.id))
+    # value = var.service_role_name
     resource  = ""
   }
 
