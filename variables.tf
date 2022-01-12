@@ -557,3 +557,9 @@ variable "enable_capacity_rebalancing" {
   default     = false
   description = "Specifies whether to enable the Capacity Rebalancing feature for Spot Instances in your Auto Scaling Group"
 }
+
+variable "service_role_name" {
+  type = string
+  default = ""
+  description = "Name of an existing role to use as the Elastic Beanstalk service role"
+}

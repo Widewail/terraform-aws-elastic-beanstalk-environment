@@ -410,6 +410,7 @@ Available targets:
 | <a name="input_version_label"></a> [version\_label](#input\_version\_label) | Elastic Beanstalk Application version to deploy | `string` | `""` | no |
 | <a name="input_vpc_id"></a> [vpc\_id](#input\_vpc\_id) | ID of the VPC in which to provision the AWS resources | `string` | n/a | yes |
 | <a name="input_wait_for_ready_timeout"></a> [wait\_for\_ready\_timeout](#input\_wait\_for\_ready\_timeout) | The maximum duration to wait for the Elastic Beanstalk Environment to be in a ready state before timing out | `string` | `"20m"` | no |
+| <a name="service_role_name"></a> [service\_role\_name](#service\_role\_name) | Name of the role to use as the Elastic Beanstalk serivice role | `string` | `""` | no |
 
 ## Outputs
 

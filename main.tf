@@ -1,6 +1,7 @@
 locals {
   enabled   = module.this.enabled
   partition = join("", data.aws_partition.current.*.partition)
+  service_role_required = var.service_role_name != "" && local.enabled
 }
 
 data "aws_partition" "current" {
@@ -11,7 +12,7 @@ data "aws_partition" "current" {
 # Service
 #
 data "aws_iam_policy_document" "service" {
-  count = local.enabled ? 1 : 0
+  count = local.service_role_required ? 1 : 0
 
   statement {
     actions = [
@@ -27,8 +28,12 @@ data "aws_iam_policy_document" "service" {
   }
 }
 
+data "aws_iam_role" "service" {
+  count = local.service_role_required == false ? 1 : 0
+  name = var.service_role_name
+}
 resource "aws_iam_role" "service" {
-  count = local.enabled ? 1 : 0
+  count = local.service_role_required ? 1 : 0
 
   name               = "${module.this.id}-eb-service"
   assume_role_policy = join("", data.aws_iam_policy_document.service.*.json)
@@ -36,14 +41,14 @@ resource "aws_iam_role" "service" {
 }
 
 resource "aws_iam_role_policy_attachment" "enhanced_health" {
-  count = local.enabled && var.enhanced_reporting_enabled ? 1 : 0
+  count = local.service_role_required && var.enhanced_reporting_enabled ? 1 : 0
 
   role       = join("", aws_iam_role.service.*.name)
   policy_arn = "arn:${local.partition}:iam::aws:policy/service-role/AWSElasticBeanstalkEnhancedHealth"
 }
 
 resource "aws_iam_role_policy_attachment" "service" {
-  count = local.enabled ? 1 : 0
+  count = local.service_role_required ? 1 : 0
 
   role       = join("", aws_iam_role.service.*.name)
   policy_arn = var.prefer_legacy_service_policy ? "arn:${local.partition}:iam::aws:policy/service-role/AWSElasticBeanstalkService" : "arn:${local.partition}:iam::aws:policy/AWSElasticBeanstalkManagedUpdatesCustomerRolePolicy"
@@ -110,17 +115,38 @@ resource "aws_iam_role_policy" "default" {
 }
 
 resource "aws_iam_role_policy_attachment" "web_tier" {
-  count = local.enabled ? 1 : 0
+  count = local.service_role_required ? 1 : 0
 
-  role       = join("", aws_iam_role.ec2.*.name)
+  role       = join("", aws_iam_role.service.*.name)
   policy_arn = "arn:${local.partition}:iam::aws:policy/AWSElasticBeanstalkWebTier"
 }
 
 resource "aws_iam_role_policy_attachment" "worker_tier" {
-  count = local.enabled ? 1 : 0
+  count = local.service_role_required ? 1 : 0
 
-  role       = join("", aws_iam_role.ec2.*.name)
+  role       = join("", aws_iam_role.service.*.name)
   policy_arn = "arn:${local.partition}:iam::aws:policy/AWSElasticBeanstalkWorkerTier"
+}
+
+resource "aws_iam_role_policy_attachment" "auto_scaling_full_access" {
+  count = local.service_role_required ? 1 : 0
+
+  role       = join("", aws_iam_role.service.*.name)
+  policy_arn = "arn:${local.partition}:iam::aws:policy/AutoScalingFullAccess "
+}
+
+resource "aws_iam_role_policy_attachment" "elastic_load_balancing_full_access" {
+  count = local.service_role_required ? 1 : 0
+
+  role       = join("", aws_iam_role.service.*.name)
+  policy_arn = "arn:${local.partition}:iam::aws:policy/ElasticLoadBalancingFullAccess "
+}
+
+resource "aws_iam_role_policy_attachment" "elastic_beanstalk_enhanced_health" {
+  count = local.service_role_required ? 1 : 0
+
+  role       = join("", aws_iam_role.service.*.name)
+  policy_arn = "arn:${local.partition}:iam::aws:policy/AWSElasticBeanstalkEnhancedHealth "
 }
 
 resource "aws_iam_role_policy_attachment" "ssm_ec2" {
@@ -656,7 +682,7 @@ resource "aws_elastic_beanstalk_environment" "default" {
   setting {
     namespace = "aws:elasticbeanstalk:environment"
     name      = "ServiceRole"
-    value     = join("", aws_iam_role.service.*.name)
+    value     = join("", try(aws_iam_role.service.*.name, data.aws_iam_role.service.*.name))
     resource  = ""
   }
 
