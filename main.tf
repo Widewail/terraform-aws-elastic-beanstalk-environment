@@ -115,14 +115,14 @@ resource "aws_iam_role_policy" "default" {
 }
 
 resource "aws_iam_role_policy_attachment" "web_tier" {
-  count = local.service_role_required ? 1 : 0
+  count = local.enabled ? 1 : 0
 
   role       = join("", aws_iam_role.ec2.*.name)
   policy_arn = "arn:${local.partition}:iam::aws:policy/AWSElasticBeanstalkWebTier"
 }
 
 resource "aws_iam_role_policy_attachment" "worker_tier" {
-  count = local.service_role_required ? 1 : 0
+  count = local.enabled ? 1 : 0
 
   role       = join("", aws_iam_role.ec2.*.name)
   policy_arn = "arn:${local.partition}:iam::aws:policy/AWSElasticBeanstalkWorkerTier"
@@ -682,8 +682,8 @@ resource "aws_elastic_beanstalk_environment" "default" {
   setting {
     namespace = "aws:elasticbeanstalk:environment"
     name      = "ServiceRole"
-    #value     = coalesce(var.service_role_name, join("", try(aws_iam_role.service.*.name), data.aws_iam_role.service.*.id))
-    value = var.service_role_name
+    value     = join("", try(aws_iam_role.service.0.name, data.aws_iam_role.service.0.id))
+    # value = var.service_role_name
     resource  = ""
   }
 
