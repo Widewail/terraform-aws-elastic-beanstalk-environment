@@ -495,6 +495,12 @@ variable "s3_bucket_encryption_enabled" {
   description = "When set to 'true' the resource will have aes256 encryption enabled by default"
 }
 
+variable "s3_bucket_expiration_days" {
+  type        = number
+  default     = 0
+  description = "Retention period in days to keep access logs"
+}
+
 variable "scheduled_actions" {
   type = list(object({
     name            = string
