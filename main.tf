@@ -2,7 +2,7 @@ locals {
   enabled               = module.this.enabled
   partition             = join("", data.aws_partition.current.*.partition)
   service_role_required = var.service_role_name == "" && local.enabled
-  elb_bucket_enabled    = local.enabled && var.tier == "WebServer" && var.environment_type == "LoadBalanced" && var.loadbalancer_type != "network" && !var.loadbalancer_is_shared ? 1 : 0
+  elb_bucket_enabled    = local.enabled && var.tier == "WebServer" && var.environment_type == "LoadBalanced" && var.loadbalancer_type != "network" && !var.loadbalancer_is_shared
 }
 
 data "aws_partition" "current" {
