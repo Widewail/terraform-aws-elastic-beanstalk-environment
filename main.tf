@@ -1164,7 +1164,7 @@ resource "aws_s3_bucket_versioning" "elb_logs" {
 }
 
 resource "aws_s3_bucket_logging" "elb_logs" {
-  count         = local.elb_bucket_enabled ? 1 : 0
+  count         = var.s3_bucket_access_log_bucket_name != "" && local.elb_bucket_enabled ? 1 : 0
   bucket        = aws_s3_bucket.elb_logs.0.id
   target_bucket = var.s3_bucket_access_log_bucket_name
   target_prefix = "logs/${module.this.id}/"
