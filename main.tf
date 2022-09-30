@@ -1,7 +1,8 @@
 locals {
-  enabled   = module.this.enabled
-  partition = join("", data.aws_partition.current.*.partition)
+  enabled               = module.this.enabled
+  partition             = join("", data.aws_partition.current.*.partition)
   service_role_required = var.service_role_name == "" && local.enabled
+  elb_bucket_enabled    = local.enabled && var.tier == "WebServer" && var.environment_type == "LoadBalanced" && var.loadbalancer_type != "network" && !var.loadbalancer_is_shared ? 1 : 0
 }
 
 data "aws_partition" "current" {
@@ -30,7 +31,7 @@ data "aws_iam_policy_document" "service" {
 
 data "aws_iam_role" "service" {
   count = local.service_role_required ? 0 : 1
-  name = var.service_role_name
+  name  = var.service_role_name
 }
 resource "aws_iam_role" "service" {
   count = local.service_role_required ? 1 : 0
@@ -374,7 +375,7 @@ locals {
   # and if it is provided, terraform tries to recreate the application on each `plan/apply`
   # `Namespace` should be removed as well since any string that contains `Name` forces recreation
   # https://github.com/terraform-providers/terraform-provider-aws/issues/3963
-  tags = { for t in keys(module.this.tags) : t => module.this.tags[t] if t != "Name" && t != "Namespace" }
+  tags = {for t in keys(module.this.tags) : t => module.this.tags[t] if t != "Name" && t != "Namespace"}
 
   classic_elb_settings = [
     {
@@ -654,8 +655,10 @@ resource "aws_elastic_beanstalk_environment" "default" {
   setting {
     namespace = "aws:autoscaling:launchconfiguration"
     name      = "SecurityGroups"
-    value     = join(",", compact(sort(concat(module.aws_security_group.id == null ? [] : [module.aws_security_group.id], var.associated_security_group_ids))))
-    resource  = ""
+    value     = join(",", compact(sort(concat(module.aws_security_group.id == null ? [] : [
+      module.aws_security_group.id
+    ], var.associated_security_group_ids))))
+    resource = ""
   }
 
   setting {
@@ -1108,7 +1111,7 @@ data "aws_elb_service_account" "main" {
 }
 
 data "aws_iam_policy_document" "elb_logs" {
-  count = local.enabled && var.tier == "WebServer" && var.environment_type == "LoadBalanced" && var.loadbalancer_type != "network" && !var.loadbalancer_is_shared ? 1 : 0
+  count = local.elb_bucket_enabled ? 1 : 0
 
   statement {
     sid = ""
@@ -1131,19 +1134,19 @@ data "aws_iam_policy_document" "elb_logs" {
 }
 
 resource "aws_s3_bucket_acl" "elb_logs" {
-  count = can(aws_s3_bucket.elb_logs.*.id) ? 1 : 0
+  count  = local.elb_bucket_enabled ? 1 : 0
   bucket = aws_s3_bucket.elb_logs.0.id
   acl    = "private"
 }
 
 resource "aws_s3_bucket_policy" "elb_logs" {
-  count = can(aws_s3_bucket.elb_logs.*.id) ? 1 : 0
+  count  = local.elb_bucket_enabled ? 1 : 0
   bucket = aws_s3_bucket.elb_logs.0.id
   policy = join("", data.aws_iam_policy_document.elb_logs.*.json)
 }
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "elb_logs" {
-  count = var.s3_bucket_encryption_enabled && can(aws_s3_bucket.elb_logs.*.id) ? 1 : 0
+  count  = var.s3_bucket_encryption_enabled && local.elb_bucket_enabled ? 1 : 0
   bucket = aws_s3_bucket.elb_logs.0.id
   rule {
     apply_server_side_encryption_by_default {
@@ -1153,7 +1156,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "elb_logs" {
 }
 
 resource "aws_s3_bucket_versioning" "elb_logs" {
-  count = can(aws_s3_bucket.elb_logs.*.id) ? 1 : 0
+  count  = local.elb_bucket_enabled ? 1 : 0
   bucket = aws_s3_bucket.elb_logs.0.id
   versioning_configuration {
     status = var.s3_bucket_versioning_enabled ? "Enabled" : "Suspended"
@@ -1161,14 +1164,14 @@ resource "aws_s3_bucket_versioning" "elb_logs" {
 }
 
 resource "aws_s3_bucket_logging" "elb_logs" {
-  count = can(aws_s3_bucket.elb_logs.*.id) ? 1 : 0
-  bucket = aws_s3_bucket.elb_logs.0.id
+  count         = local.elb_bucket_enabled ? 1 : 0
+  bucket        = aws_s3_bucket.elb_logs.0.id
   target_bucket = var.s3_bucket_access_log_bucket_name
   target_prefix = "logs/${module.this.id}/"
 }
 
 resource "aws_s3_bucket_lifecycle_configuration" "elb_logs" {
-  count = var.s3_bucket_expiration_days > 0 && can(aws_s3_bucket.elb_logs.*.id) ? 1 : 0
+  count  = var.s3_bucket_expiration_days > 0 && local.elb_bucket_enabled ? 1 : 0
   bucket = aws_s3_bucket.elb_logs.0.id
   rule {
     id     = "expire-old-logs"
@@ -1187,7 +1190,7 @@ resource "aws_s3_bucket" "elb_logs" {
   #bridgecrew:skip=BC_AWS_GENERAL_56:Skipping "Ensure S3 buckets are encrypted with KMS by default"
   #bridgecrew:skip=BC_AWS_NETWORKING_52:Skipping "Ensure S3 Bucket has public access blocks"
   #bridgecrew:skip=BC_AWS_GENERAL_72:Skipping "Ensure S3 bucket has cross-region replication enabled"
-  count         = local.enabled && var.tier == "WebServer" && var.environment_type == "LoadBalanced" && var.loadbalancer_type != "network" && !var.loadbalancer_is_shared ? 1 : 0
+  count         = local.elb_bucket_enabled ? 1 : 0
   bucket        = "${module.this.id}-eb-loadbalancer-logs"
   force_destroy = var.force_destroy
   tags          = module.this.tags
