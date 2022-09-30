@@ -1131,17 +1131,19 @@ data "aws_iam_policy_document" "elb_logs" {
 }
 
 resource "aws_s3_bucket_acl" "elb_logs" {
+  count = can(aws_s3_bucket.elb_logs.0.id) ? 1 : 0
   bucket = aws_s3_bucket.elb_logs.0.id
   acl    = "private"
 }
 
 resource "aws_s3_bucket_policy" "elb_logs" {
+  count = can(aws_s3_bucket.elb_logs.0.id) ? 1 : 0
   bucket = aws_s3_bucket.elb_logs.0.id
   policy = join("", data.aws_iam_policy_document.elb_logs.*.json)
 }
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "elb_logs" {
-  count = var.s3_bucket_encryption_enabled ? 1 : 0
+  count = var.s3_bucket_encryption_enabled && can(aws_s3_bucket.elb_logs.0.id) ? 1 : 0
   bucket = aws_s3_bucket.elb_logs.0.id
   rule {
     apply_server_side_encryption_by_default {
@@ -1151,19 +1153,22 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "elb_logs" {
 }
 
 resource "aws_s3_bucket_versioning" "elb_logs" {
+  count = can(aws_s3_bucket.elb_logs.0.id) ? 1 : 0
   bucket = aws_s3_bucket.elb_logs.0.id
   versioning_configuration {
     status = var.s3_bucket_versioning_enabled ? "Enabled" : "Suspended"
   }
 }
+
 resource "aws_s3_bucket_logging" "elb_logs" {
+  count = can(aws_s3_bucket.elb_logs.0.id) ? 1 : 0
   bucket = aws_s3_bucket.elb_logs.0.id
   target_bucket = var.s3_bucket_access_log_bucket_name
   target_prefix = "logs/${module.this.id}/"
 }
 
 resource "aws_s3_bucket_lifecycle_configuration" "elb_logs" {
-  count = var.s3_bucket_expiration_days > 0 ? 1 : 0
+  count = var.s3_bucket_expiration_days > 0 && can(aws_s3_bucket.elb_logs.0.id) ? 1 : 0
   bucket = aws_s3_bucket.elb_logs.0.id
   rule {
     id     = "expire-old-logs"
