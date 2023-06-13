@@ -1137,6 +1137,15 @@ resource "aws_s3_bucket_acl" "elb_logs" {
   count  = local.elb_bucket_enabled ? 1 : 0
   bucket = aws_s3_bucket.elb_logs.0.id
   acl    = "private"
+  depends_on = [aws_s3_bucket_ownership_controls.elb_logs]
+}
+
+resource "aws_s3_bucket_ownership_controls" "elb_logs" {
+  count  = local.elb_bucket_enabled ? 1 : 0
+  bucket = aws_s3_bucket.elb_logs.0.id
+  rule {
+    object_ownership = "ObjectWriter"
+  }
 }
 
 resource "aws_s3_bucket_policy" "elb_logs" {
