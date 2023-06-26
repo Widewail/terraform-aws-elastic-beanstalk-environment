@@ -44,6 +44,12 @@ variable "loadbalancer_crosszone" {
   description = "Configure the classic load balancer to route traffic evenly across all instances in all Availability Zones rather than only within each zone."
 }
 
+variable "loadbalancer_connection_idle_timeout" {
+  type        = number
+  default     = 60
+  description = "Classic load balancer only: Number of seconds that the load balancer waits for any data to be sent or received over the connection. If no data has been sent or received after this time period elapses, the load balancer closes the connection."
+}
+
 variable "dns_zone_id" {
   type        = string
   default     = ""
@@ -177,6 +183,12 @@ variable "rolling_update_type" {
   type        = string
   default     = "Health"
   description = "`Health` or `Immutable`. Set it to `Immutable` to apply the configuration change to a fresh group of instances"
+}
+
+variable "deployment_policy" {
+  type        = string
+  default     = "Rolling"
+  description = "Use the DeploymentPolicy option to set the deployment type. The following values are supported: `AllAtOnce`, `Rolling`, `RollingWithAdditionalBatch`, `Immutable`, `TrafficSplitting`"
 }
 
 variable "updating_min_in_service" {
@@ -359,12 +371,6 @@ variable "elb_scheme" {
   description = "Specify `internal` if you want to create an internal load balancer in your Amazon VPC so that your Elastic Beanstalk application cannot be accessed from outside your Amazon VPC"
 }
 
-variable "ssh_source_restriction" {
-  type        = string
-  default     = "0.0.0.0/0"
-  description = "Used to lock down SSH access to the EC2 instances"
-}
-
 variable "ssh_listener_enabled" {
   type        = bool
   default     = false
@@ -461,7 +467,7 @@ variable "deployment_timeout" {
 
 variable "extended_ec2_policy_document" {
   type        = string
-  default     = "{}"
+  default     = ""
   description = "Extensions or overrides for the IAM role assigned to EC2 instances"
 }
 
@@ -562,6 +568,47 @@ variable "enable_capacity_rebalancing" {
   type        = bool
   default     = false
   description = "Specifies whether to enable the Capacity Rebalancing feature for Spot Instances in your Auto Scaling Group"
+}
+
+variable "loadbalancer_redirect_http_to_https" {
+  type        = bool
+  default     = false
+  description = "Redirect HTTP traffic to HTTPS listener"
+}
+
+variable "loadbalancer_redirect_http_to_https_priority" {
+  type        = number
+  default     = 1
+  description = "Defines the priority for the HTTP to HTTPS redirection rule"
+}
+
+variable "loadbalancer_redirect_http_to_https_path_pattern" {
+  type        = list(string)
+  default     = ["*"]
+  description = "Defines the path pattern for the HTTP to HTTPS redirection rule"
+}
+
+variable "loadbalancer_redirect_http_to_https_host" {
+  type        = string
+  default     = "#{host}"
+  description = "Defines the host for the HTTP to HTTPS redirection rule"
+}
+
+variable "loadbalancer_redirect_http_to_https_port" {
+  type        = string
+  default     = "443"
+  description = "Defines the port for the HTTP to HTTPS redirection rule"
+}
+
+variable "loadbalancer_redirect_http_to_https_status_code" {
+  type        = string
+  default     = "HTTP_301"
+  description = "The redirect status code"
+
+  validation {
+    condition     = contains(["HTTP_301", "HTTP_302"], var.loadbalancer_redirect_http_to_https_status_code)
+    error_message = "Allowed values are \"HTTP_301\" or \"HTTP_302\"."
+  }
 }
 
 variable "service_role_name" {
