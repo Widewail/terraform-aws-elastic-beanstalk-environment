@@ -315,10 +315,10 @@ data "aws_iam_policy_document" "default" {
       "iam:PassRole"
     ]
 
-    resources = [
+    resources = compact([
       join("", aws_iam_role.ec2[*].arn),
       join("", aws_iam_role.service[*].arn)
-    ]
+    ])
 
     effect = "Allow"
   }
