@@ -838,6 +838,13 @@ resource "aws_elastic_beanstalk_environment" "default" {
     resource  = ""
   }
 
+  setting {
+    namespace = "aws:autoscaling:launchconfiguration"
+    name      = "DisableIMDSv1"
+    value     = true
+    resource  = ""
+  }
+
   dynamic "setting" {
     for_each = var.root_volume_throughput == null ? [] : [var.root_volume_throughput]
     content {
